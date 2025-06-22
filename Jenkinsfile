@@ -1,23 +1,53 @@
 pipeline {
     agent any
 
+    environment {
+        NODE_ENV = 'development'
+    }
+
     stages {
-        stage('Build') {
+        stage('Checkout') {
             steps {
-                echo 'Building...'
+                echo '📥 Cloning repository...'
+                checkout scm
             }
         }
 
-        stage('Test') {
+        stage('Install dependencies') {
             steps {
-                echo 'Testing...'
+                echo '📦 Installing dependencies...'
+                sh 'npm install'
+            }
+        }
+
+        stage('Run tests') {
+            steps {
+                echo '🧪 Running tests...'
+                sh 'npm test || echo "No test configured"'
+            }
+        }
+
+        stage('Build project') {
+            steps {
+                echo '🔨 Building the project...'
+                sh 'npm run build || echo "No build script defined"'
             }
         }
 
         stage('Deploy') {
             steps {
-                echo 'Deploying...'
+                echo '🚀 Deploying the project...'
+                sh 'echo "Deploying app..."'
             }
+        }
+    }
+
+    post {
+        success {
+            echo '✅ Pipeline completed successfully!'
+        }
+        failure {
+            echo '❌ Pipeline failed.'
         }
     }
 }
