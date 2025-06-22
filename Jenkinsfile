@@ -2,7 +2,9 @@ pipeline {
     agent any
 
     environment {
-        NODE_ENV = 'development'
+        DOCKERHUB_USER = 'ton-user'
+        DOCKERHUB_PASS = credentials('dockerhub-creds')
+        IMAGE_NAME = 'ton-user/mon-app'
     }
 
     stages {
@@ -13,41 +15,56 @@ pipeline {
             }
         }
 
-        stage('Install dependencies') {
+        stage('Test & Scan') {
             steps {
-                echo '📦 Installing dependencies...'
-                sh 'npm install'
+                echo '🧪 Running tests & security scans...'
+                sh 'npm install && npm test'
+                sh 'npm audit || true' // ne bloque pas le pipeline
             }
         }
 
-        stage('Run tests') {
+        stage('Build Docker Image') {
             steps {
-                echo '🧪 Running tests...'
-                sh 'npm test || echo "No test configured"'
+                echo '🐳 Building Docker image...'
+                sh 'docker build -t $IMAGE_NAME .'
             }
         }
 
-        stage('Build project') {
+        stage('Push Image to DockerHub') {
             steps {
-                echo '🔨 Building the project...'
-                sh 'npm run build || echo "No build script defined"'
+                echo '🚀 Pushing image...'
+                sh 'echo $DOCKERHUB_PASS | docker login -u $DOCKERHUB_USER --password-stdin'
+                sh 'docker push $IMAGE_NAME'
             }
         }
 
-        stage('Deploy') {
+        stage('Deploy to Remote') {
             steps {
-                echo '🚀 Deploying the project...'
-                sh 'echo "Deploying app..."'
+                echo '📦 Deploying on remote server...'
+                // tu peux utiliser ssh ou docker run ici
+                sh 'docker run -d -p 3000:3000 $IMAGE_NAME'
+            }
+        }
+
+        stage('Health Check') {
+            steps {
+                echo '🩺 Verifying health...'
+                sh 'curl -f http://localhost:3000/health || exit 1'
+            }
+        }
+
+        stage('Notify') {
+            steps {
+                echo '📣 Notifying team...'
+                // Exemple : Slack, Discord, Email, etc.
             }
         }
     }
 
     post {
-        success {
-            echo '✅ Pipeline completed successfully!'
-        }
         failure {
-            echo '❌ Pipeline failed.'
+            echo '⚠️ Something went wrong, rolling back...'
+            // Exemple : rollback docker container
         }
     }
 }
