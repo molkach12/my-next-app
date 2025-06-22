@@ -4,19 +4,19 @@ pipeline {
     stages {
         stage('Build') {
             steps {
-                echo '🚧 Build stage: Nothing to compile yet'
+                echo 'Building...'
             }
         }
 
         stage('Test') {
             steps {
-                echo '✅ Test stage: No tests defined'
+                echo 'Testing...'
             }
         }
 
         stage('Deploy') {
             steps {
-                echo '🚀 Deploy stage: Add deployment steps here'
+                echo 'Deploying...'
             }
         }
     }
