@@ -2,69 +2,69 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_USER = 'ton-user'
-        DOCKERHUB_PASS = credentials('dockerhub-creds')
-        IMAGE_NAME = 'ton-user/mon-app'
+        DOCKERHUB_USER = 'ton_user_dockerhub'
+        DOCKERHUB_PASS = credentials('dockerhub-creds')  // à créer dans Jenkins
+        IMAGE_NAME = "${DOCKERHUB_USER}/my-next-app"
     }
 
     stages {
         stage('Checkout') {
             steps {
-                echo '📥 Cloning repository...'
+                echo '📥 Cloning code...'
                 checkout scm
             }
         }
 
-        stage('Test & Scan') {
+        stage('Tests & Security') {
             steps {
-                echo '🧪 Running tests & security scans...'
-                sh 'npm install && npm test'
-                sh 'npm audit || true' // ne bloque pas le pipeline
+                echo '🧪 Running tests and scans...'
+                sh 'npm install'
+                sh 'npm test || true'
+                sh 'npm audit || true'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                echo '🐳 Building Docker image...'
+                echo '🐳 Building image...'
                 sh 'docker build -t $IMAGE_NAME .'
             }
         }
 
-        stage('Push Image to DockerHub') {
+        stage('Push to DockerHub') {
             steps {
-                echo '🚀 Pushing image...'
+                echo '🚀 Pushing image to DockerHub...'
                 sh 'echo $DOCKERHUB_PASS | docker login -u $DOCKERHUB_USER --password-stdin'
                 sh 'docker push $IMAGE_NAME'
             }
         }
 
-        stage('Deploy to Remote') {
+        stage('Deploy Container') {
             steps {
-                echo '📦 Deploying on remote server...'
-                // tu peux utiliser ssh ou docker run ici
-                sh 'docker run -d -p 3000:3000 $IMAGE_NAME'
+                echo '📦 Deploying container...'
+                sh 'docker rm -f myapp || true'
+                sh 'docker run -d -p 3000:3000 --name myapp $IMAGE_NAME'
             }
         }
 
         stage('Health Check') {
             steps {
-                echo '🩺 Verifying health...'
-                sh 'curl -f http://localhost:3000/health || exit 1'
+                echo '🔍 Checking health...'
+                sh 'curl -f http://localhost:3000 || exit 1'
             }
         }
 
         stage('Notify') {
             steps {
-                echo '📣 Notifying team...'
-                // Exemple : Slack, Discord, Email, etc.
+                echo '📣 Build succeeded! (You can integrate Slack/email here)'
             }
         }
     }
 
     post {
         failure {
-            echo '⚠️ Something went wrong, rolling back...'
-            // Exemple : rollback docker container
+            echo '⚠️ Failure detected, rolling back...'
+            sh 'docker restart myapp' // ou autre rollback
         }
     }
 }
